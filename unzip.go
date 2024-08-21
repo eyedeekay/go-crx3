@@ -62,7 +62,7 @@ func Unzip(r io.ReaderAt, size int64, unpacked string) error {
 		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
 			return err
 		}
-		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, FixMode(file.Mode()))
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, FixMode(file))
 		if err != nil {
 			return err
 		}
@@ -83,13 +83,18 @@ func Unzip(r io.ReaderAt, size int64, unpacked string) error {
 	return nil
 }
 
-// FixMode checks if the file mode matches: --w----r-T,
+// FixMode checks if the file mode are nonsense
 // which is an erronous permission caused by the fact that zip doesn't know about permissions
-func FixMode(mode fs.FileMode) fs.FileMode {
-	var badValue fs.FileMode = 1204
-	if mode == badValue {
-		var goodValue fs.FileMode = 0644
-		return goodValue
+func FixMode(mode *zip.File) fs.FileMode {
+	fmt.Println("checking perm:", mode.FileInfo().Mode())
+	if mode.FileInfo().IsDir() {
+		if mode.FileInfo().Mode() != 0755 {
+			return 0755
+		}
+	} else {
+		if mode.FileInfo().Mode() != 0644 {
+			return 0644
+		}
 	}
-	return mode
+	return mode.FileInfo().Mode()
 }
